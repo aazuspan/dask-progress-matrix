@@ -1,0 +1,36 @@
+[project]
+name = "dask-visualizer"
+version = "0.1.0"
+description = "A 2D progress matrix for visualizing Dask computations by chunk."
+readme = "README.md"
+authors = [
+    { name = "Aaron Zuspan", email = "aa.zuspan@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "dask",
+    "numpy",
+    "rich",
+    "rich-pixels",
+]
+
+[build-system]
+requires = ["uv_build>=0.7.19,<0.8"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "dask[complete]",
+    "ipykernel",
+    "ipywidgets",
+    "matplotlib",
+    "pre-commit",
+    "rioxarray",
+    "ruff",
+    "sklearn-raster[datasets]",
+    "sknnr",
+    "xarray",
+]
+
+[tool.ruff.lint]
+select = ["E", "I", "F", "B", "FA", "UP", "PT", "Q", "RET", "SIM", "PERF"]
