@@ -1,20 +1,32 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import dask.array
 from dask.diagnostics import Callback
-from dask_visualizer.display import ArrayComputationDisplay
-from dask_visualizer.status import ArrayComputationStatus
-from dask_visualizer.types import Graph, State, TaskKey
 from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    import xarray as xr
+
+from dask_visualizer.display import ComputationDisplay
+from dask_visualizer.status import ComputationStatus
+from dask_visualizer.types import Graph, State, TaskKey
+from dask_visualizer.utils import extract_dask_array
 
 
 class ProgressMatrix(Callback):
     # https://docs.dask.org/en/stable/diagnostics-local.html#custom-callbacks
     def __init__(
-        self, obj: dask.array.Array, *, cmap: str = "viridis", height: int = 20
+        self,
+        obj: dask.array.Array | xr.DataArray | xr.Dataset,
+        *,
+        cmap: str = "viridis",
+        height: int = 20,
     ):
-        self._status = ArrayComputationStatus(obj)
-        self._display = ArrayComputationDisplay(obj.shape, cmap=cmap, height=height)
+        obj = extract_dask_array(obj)
+        self._status = ComputationStatus(obj)
+        self._display = ComputationDisplay(obj, cmap=cmap, height=height)
 
     def _start(self, dsk: Graph):
         self._status.initialize(dsk)
@@ -30,13 +42,10 @@ class ProgressMatrix(Callback):
         self._status.finish_task(key)
         self._display.update(self._status)
 
-    def _finish(self, dsk: Graph, state: State, errored: bool):
-        self._status.finish()
-        self._display.update(self._status)
-
     def __enter__(self):
         super().__enter__()
         self._display.__enter__()
+        return self
 
     def __exit__(self, *args):
         super().__exit__(*args)
