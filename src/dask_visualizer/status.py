@@ -1,6 +1,8 @@
+import time
 from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
+from typing import Literal
 
 import dask.array
 import numpy as np
@@ -27,12 +29,14 @@ class ComputationChunk:
     def start(self):
         self.state = ComputationState.STARTED
         self.tasks_remaining -= 0.5
+        self.start_time = time.time()
 
     def finish(self, idx: int):
         self.tasks_remaining -= 0.5
         if self.tasks_remaining == 0:
             self.completed_idx = idx
             self.state = ComputationState.COMPLETE
+            self.end_time = time.time()
 
 
 class ComputationStatus:
@@ -40,8 +44,11 @@ class ComputationStatus:
     Track the computation state of a Dask array in a Numpy array.
     """
 
-    def __init__(self, obj: dask.array.Array):
+    def __init__(
+        self, obj: dask.array.Array, mode: Literal["index", "elapsed"] = "index"
+    ):
         self._obj = obj
+        self._mode = mode
 
         # Track the sequential index of the last completed slice
         self._current_idx = 0
@@ -97,8 +104,17 @@ class ComputationStatus:
         # Update the block's current state
         self.state[chunk_index] = computation.state.value
 
+        # Store the appropriate value in the completed state, depending on the selected
+        # mode.
         if computation.state is ComputationState.COMPLETE:
-            # Store and increment the index when the computation was completed, scaled
-            # [0, 1] to match the progress value range.
-            self.completed_state[chunk_index] = self._current_idx
-            self._current_idx += 1 / np.prod(self._chunk_indexer.numblocks)
+            if self._mode == "index":
+                self.completed_state[chunk_index] = self._current_idx
+                self._current_idx += 1
+            elif self._mode == "elapsed":
+                self.completed_state[chunk_index] = (
+                    computation.end_time - computation.start_time
+                )
+
+    def finish(self):
+        # Normalize the completed state [0, 1] for visualization
+        self.completed_state /= self.completed_state.max()

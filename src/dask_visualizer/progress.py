@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import dask.array
 from dask.diagnostics import Callback
@@ -23,9 +23,10 @@ class ProgressMatrix(Callback):
         *,
         cmap: str = "viridis",
         height: int = 20,
+        mode: Literal["index", "elapsed"] = "index",
     ):
         obj = extract_dask_array(obj)
-        self._status = ComputationStatus(obj)
+        self._status = ComputationStatus(obj, mode=mode)
         self._display = ComputationDisplay(obj, cmap=cmap, height=height)
 
     def _start(self, dsk: Graph):
@@ -43,6 +44,7 @@ class ProgressMatrix(Callback):
         self._display.update(self._status.state)
 
     def _finish(self, dsk: Graph, state: State, errored: bool):
+        self._status.finish()
         self._display.update(self._status.completed_state)
 
     def __enter__(self):
