@@ -30,17 +30,20 @@ class ProgressMatrix(Callback):
 
     def _start(self, dsk: Graph):
         self._status.initialize(dsk)
-        self._display.update(self._status)
+        self._display.update(self._status.state)
 
     def _pretask(self, key: TaskKey, dsk: Graph, state: State):
         self._status.start_task(key)
-        self._display.update(self._status)
+        self._display.update(self._status.state)
 
     def _posttask(
         self, key: TaskKey, result: NDArray, dsk: Graph, state: State, id: int
     ):
         self._status.finish_task(key)
-        self._display.update(self._status)
+        self._display.update(self._status.state)
+
+    def _finish(self, dsk: Graph, state: State, errored: bool):
+        self._display.update(self._status.completed_state)
 
     def __enter__(self):
         super().__enter__()

@@ -1,7 +1,5 @@
 import dask
-import matplotlib.pyplot as plt
 import numpy as np
-from dask_visualizer.status import ComputationStatus
 from matplotlib import colormaps
 from matplotlib.colors import Colormap
 from numpy.typing import NDArray
@@ -26,17 +24,13 @@ class ComputationDisplay:
         array_aspect = array_height / array_width
         return int(self._height / array_aspect)
 
-    def update(self, status: ComputationStatus):
-        img = self._generate_image(status.state, vmin=0, vmax=2)
+    def update(self, state: NDArray):
+        img = self._generate_image(state)
         panel = Group(Text(self._obj.name) + "\n" + self._legend + "\n", img)
         self._live.update(panel)
 
-    def _generate_image(self, array: NDArray, vmin: float, vmax: float) -> Pixels:
-        # This is obviously very inefficient rebuilding the whole RGB image every update
-        image = Image.fromarray(
-            visualize_array(array, cmap=self._cmap, vmin=vmin, vmax=vmax)
-        )
-
+    def _generate_image(self, array: NDArray) -> Pixels:
+        image = Image.fromarray(visualize_array(array, cmap=self._cmap))
         return Pixels.from_image(image, resize=(self._width, self._height))
 
     def __enter__(self):
@@ -67,14 +61,9 @@ class ComputationDisplay:
         return Text(" ").join(labels)
 
 
-def visualize_array(
-    arr: np.ndarray, cmap: Colormap, vmin=None, vmax=None
-) -> np.ndarray:
+def visualize_array(arr: np.ndarray, cmap: Colormap) -> np.ndarray:
     """
-    Convert a 2D NumPy array to an RGBA image using a matplotlib colormap.
+    Convert a 2D NumPy array in the range [0, 1] to a byte RGBA image.
     """
-    vmin = vmin if vmin is not None else np.nanmin(arr)
-    vmax = vmax if vmax is not None else np.nanmax(arr)
-    norm = plt.Normalize(vmin=vmin, vmax=vmax, clip=True)
-    img = cmap(norm(arr))
+    img = cmap(arr)
     return (img * 255).astype(np.uint8)
