@@ -16,7 +16,10 @@ from dask_visualizer.utils import extract_dask_array
 
 
 class ProgressMatrix(Callback):
-    # https://docs.dask.org/en/stable/diagnostics-local.html#custom-callbacks
+    """
+    A progress matrix for tracking computations of 2D and 3D Dask objects by chunk.
+    """
+
     def __init__(
         self,
         obj: dask.array.Array | xr.DataArray | xr.Dataset,
@@ -26,8 +29,9 @@ class ProgressMatrix(Callback):
         mode: Literal["index", "elapsed"] = "index",
     ):
         obj = extract_dask_array(obj)
+        self._mode = mode
         self._status = ComputationStatus(obj, mode=mode)
-        self._display = ComputationDisplay(obj, cmap=cmap, height=height)
+        self._display = ComputationDisplay(obj, mode=mode, cmap=cmap, height=height)
 
     def _start(self, dsk: Graph):
         self._status.initialize(dsk)
@@ -44,8 +48,10 @@ class ProgressMatrix(Callback):
         self._display.update(self._status.state)
 
     def _finish(self, dsk: Graph, state: State, errored: bool):
-        self._status.finish()
-        self._display.update(self._status.completed_state)
+        self._display.update(
+            self._status.completed_state,
+            complete=True,
+        )
 
     def __enter__(self):
         super().__enter__()

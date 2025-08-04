@@ -1,37 +1,36 @@
+from __future__ import annotations
+
+from typing import Literal
+
 import dask
 import numpy as np
+from dask_visualizer.status import ComputationState
 from matplotlib import colormaps
 from matplotlib.colors import Colormap
 from numpy.typing import NDArray
 from PIL import Image
 from rich.console import Group
 from rich.live import Live
+from rich.table import Table
 from rich.text import Text
 from rich_pixels import Pixels
 
 
 class ComputationDisplay:
-    def __init__(self, obj: dask.array.Array, height: int = 20, cmap: str = "viridis"):
+    def __init__(
+        self,
+        obj: dask.array.Array,
+        mode: Literal["index", "elapsed"],
+        height: int = 20,
+        cmap: str = "viridis",
+    ):
         self._obj = obj
+        self._mode = mode
         self._height = height
         self._width = self._compute_width(obj.shape)
         self._cmap = colormaps.get_cmap(cmap)
         self._legend = self._generate_legend()
         self._live = Live()
-
-    def _compute_width(self, array_shape):
-        array_height, array_width = array_shape[-2:]
-        array_aspect = array_height / array_width
-        return int(self._height / array_aspect)
-
-    def update(self, state: NDArray):
-        img = self._generate_image(state)
-        panel = Group(Text(self._obj.name) + "\n" + self._legend + "\n", img)
-        self._live.update(panel)
-
-    def _generate_image(self, array: NDArray) -> Pixels:
-        image = Image.fromarray(visualize_array(array, cmap=self._cmap))
-        return Pixels.from_image(image, resize=(self._width, self._height))
 
     def __enter__(self):
         self._live.__enter__()
@@ -39,31 +38,111 @@ class ComputationDisplay:
     def __exit__(self, *args):
         self._live.__exit__(*args)
 
-    def _generate_legend(self) -> Text:
-        """
-        Generate a legend for the colormap.
-        """
+    def _compute_width(self, array_shape):
+        array_height, array_width = array_shape[-2:]
+        array_aspect = array_height / array_width
+        return int(self._height / array_aspect)
 
-        def _get_color(pixel) -> str | None:
-            r, g, b, a = [int(p * 255) for p in pixel]
-            return f"rgb({r},{g},{b})"
+    def update(self, state: NDArray, complete=False):
+        # When complete, display the appropriate colorbar and normalize the state for
+        # drawing.
+        if complete:
+            legend = self._generate_colorbar(state)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                state = state / state.max()
+        else:
+            legend = self._legend
 
-        colors = {
-            "Waiting": _get_color(self._cmap(0.0)),
-            "Started": _get_color(self._cmap(0.5)),
-            "Finished": _get_color(self._cmap(1.0)),
-        }
+        self._live.update(
+            Group(
+                legend,
+                Text("\n"),
+                self._generate_image(state),
+            )
+        )
 
-        labels = [
-            Text("  ", style=f"on {color}") + Text(f" {state} ", style="on default")
-            for state, color in colors.items()
+    def _generate_image(self, array: NDArray) -> Pixels:
+        """Convert a state array into a renderable, color-mapped terminal image."""
+        image = Image.fromarray(_visualize_array(array, cmap=self._cmap))
+        return Pixels.from_image(image, resize=(self._width, self._height))
+
+    def _generate_legend(self) -> Table:
+        """Generate a legend for the colormap."""
+        colors = [
+            _get_color(self._cmap(i.value))
+            for i in (
+                ComputationState.WAITING,
+                ComputationState.STARTED,
+                ComputationState.COMPLETE,
+            )
         ]
-        return Text(" ").join(labels)
+        colorbar = Table(
+            title="Chunk state", width=self._width, padding=0, show_edge=False, box=None
+        )
+        colorbar.add_column("Waiting", justify="left", header_style="not bold")
+        colorbar.add_column("Started", justify="center", header_style="not bold")
+        colorbar.add_column("Complete", justify="right", header_style="not bold")
+        colorbar.add_row(*[Text("  ", style=f"on {color}") for color in colors])
+
+        return colorbar
+
+    def _generate_colorbar(self, state: NDArray) -> Group:
+        """
+        Generate a colorbar for the un-normalized state array.
+
+        The colorbar title and formatting will depend on the selected mode, i.e. whether
+        the final state displays the index or the elapsed time of each computed chunk.
+        """
+        min_val = state.min()
+        max_val = state.max()
+
+        # Indexes should be listed as integers
+        if self._mode == "index":
+            cbar_title = "Chunk index"
+            cbar_format = ".0f"
+        # Elapsed time should be listed as floats with a reasonable unit
+        elif self._mode == "elapsed":
+            if max_val < 0.1:
+                unit = "ms"
+                max_val *= 1000
+                min_val *= 1000
+            elif max_val > 60:
+                unit = "m"
+                max_val /= 60
+                min_val /= 60
+            else:
+                unit = "s"
+            cbar_title = f"Elapsed ({unit})"
+            cbar_format = ".2f"
+
+        cbar_min = format(min_val, cbar_format)
+        cbar_max = format(max_val, cbar_format)
+
+        gradient = Text("").join(
+            [
+                Text(" ", style=f"on {_get_color(self._cmap(i))}")
+                for i in np.linspace(0.0, 1.0, self._width)
+            ]
+        )
+
+        colorbar = Table(
+            title=cbar_title, width=self._width, padding=0, show_edge=False, box=None
+        )
+        colorbar.add_column(cbar_min, justify="left", header_style="not bold")
+        colorbar.add_column(cbar_max, justify="right", header_style="not bold")
+
+        return Group(colorbar, gradient)
 
 
-def visualize_array(arr: np.ndarray, cmap: Colormap) -> np.ndarray:
+def _visualize_array(arr: np.ndarray, cmap: Colormap) -> np.ndarray:
     """
     Convert a 2D NumPy array in the range [0, 1] to a byte RGBA image.
     """
     img = cmap(arr)
     return (img * 255).astype(np.uint8)
+
+
+def _get_color(pixel: tuple[float, float, float, float]) -> str | None:
+    """Convert an RGBA tuple in range [0, 1] to a CSS RGB string."""
+    r, g, b, a = [int(p * 255) for p in pixel]
+    return f"rgb({r},{g},{b})"

@@ -11,28 +11,27 @@ from dask_visualizer.types import Graph, TaskKey
 
 
 class ComputationState(Enum):
-    WAITING = 0
+    WAITING = 0.0
     STARTED = 0.5
-    COMPLETE = 1
+    COMPLETE = 1.0
 
 
 @dataclass
 class ComputationChunk:
-    # The number of tasks remaining to complete the chunk. For a 2D array, this will be
-    # initialized to 1 and decremented by 0.5 when the chunk is started and again when
-    # it is finished. For a 3D array, there will be one task per coordinate in the 1st
-    # dimension.
+    """A 2D chunk of computation."""
+
     tasks_remaining: int
     state: ComputationState = ComputationState.WAITING
     completed_idx: int | None = None
 
     def start(self):
+        """Start one task of the computation."""
         self.state = ComputationState.STARTED
-        self.tasks_remaining -= 0.5
         self.start_time = time.time()
 
     def finish(self, idx: int):
-        self.tasks_remaining -= 0.5
+        """Finish one task of the computation."""
+        self.tasks_remaining -= 1
         if self.tasks_remaining == 0:
             self.completed_idx = idx
             self.state = ComputationState.COMPLETE
@@ -50,7 +49,7 @@ class ComputationStatus:
         self._obj = obj
         self._mode = mode
 
-        # Track the sequential index of the last completed slice
+        # Track the sequential index of the last completed chunk
         self._current_idx = 0
 
         # An indexer from (x, y) chunk indexes to array indexes
@@ -59,7 +58,10 @@ class ComputationStatus:
         # A mapping from (x, y) chunk indices to computation chunks
         self._chunks: dict[tuple[int, int], ComputationChunk] = {}
 
+        # The current integer-encoded computation state of each block
         self.state = np.zeros(self._chunk_indexer.numblocks)
+
+        # The completed state of each block, depending on the mode
         self.completed_state = np.zeros(self._chunk_indexer.numblocks)
 
     def _is_tracked_task(self, key: TaskKey) -> bool:
@@ -114,7 +116,3 @@ class ComputationStatus:
                 self.completed_state[chunk_index] = (
                     computation.end_time - computation.start_time
                 )
-
-    def finish(self):
-        # Normalize the completed state [0, 1] for visualization
-        self.completed_state /= self.completed_state.max()
