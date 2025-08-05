@@ -25,13 +25,13 @@ class ProgressMatrix(Callback):
         obj: dask.array.Array | xr.DataArray | xr.Dataset,
         *,
         cmap: str = "viridis",
-        height: int = 20,
+        width: int = 20,
         mode: Literal["index", "elapsed"] = "index",
     ):
         obj = extract_dask_array(obj)
         self._mode = mode
         self._status = ComputationStatus(obj, mode=mode)
-        self._display = ComputationDisplay(obj, mode=mode, cmap=cmap, height=height)
+        self._display = ComputationDisplay(obj, mode=mode, cmap=cmap, width=width)
 
     def _start(self, dsk: Graph):
         self._status.initialize(dsk)

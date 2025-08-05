@@ -21,13 +21,13 @@ class ComputationDisplay:
         self,
         obj: dask.array.Array,
         mode: Literal["index", "elapsed"],
-        height: int = 20,
+        width: int = 20,
         cmap: str = "viridis",
     ):
         self._obj = obj
         self._mode = mode
-        self._height = height
-        self._width = self._compute_width(obj.shape)
+        self._width = width
+        self._height = self._compute_height(obj.shape)
         self._cmap = colormaps.get_cmap(cmap)
         self._legend = self._generate_legend()
         self._live = Live()
@@ -38,10 +38,10 @@ class ComputationDisplay:
     def __exit__(self, *args):
         self._live.__exit__(*args)
 
-    def _compute_width(self, array_shape):
+    def _compute_height(self, array_shape):
         array_height, array_width = array_shape[-2:]
         array_aspect = array_height / array_width
-        return int(self._height / array_aspect)
+        return int(array_aspect * self._width)
 
     def update(self, state: NDArray, complete=False):
         # When complete, display the appropriate colorbar and normalize the state for
@@ -64,7 +64,7 @@ class ComputationDisplay:
     def _generate_image(self, array: NDArray) -> Pixels:
         """Convert a state array into a renderable, color-mapped terminal image."""
         image = Image.fromarray(_visualize_array(array, cmap=self._cmap))
-        return Pixels.from_image(image, resize=(self._width, self._height))
+        return Pixels.from_image(image)  # , resize=(self._width, self._height))
 
     def _generate_legend(self) -> Table:
         """Generate a legend for the colormap."""
