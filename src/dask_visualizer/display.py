@@ -67,7 +67,7 @@ class ComputationDisplay:
     def _generate_image(self, array: NDArray) -> Pixels:
         """Convert a state array into a renderable, color-mapped terminal image."""
         image = Image.fromarray(_visualize_array(array, cmap=self._cmap))
-        return Pixels.from_image(image)  # , resize=(self._width, self._height))
+        return Pixels.from_image(image, resize=(self._width, self._height))
 
     def _generate_legend(self) -> Table:
         """Generate a legend for the colormap."""

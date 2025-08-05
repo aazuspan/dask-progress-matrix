@@ -28,9 +28,8 @@ class ProgressMatrix(Callback):
         width: int = 20,
         mode: Literal["index", "elapsed"] = "index",
     ):
-        obj = extract_dask_array(obj)
+        self._obj = extract_dask_array(obj)
         self._mode = mode
-
         # The (x, y) shape of the object in chunks
         shape = [len(chunk) for chunk in obj.chunks[-2:]]
         self._status = ComputationStatus(shape, mode=mode)
@@ -41,20 +40,41 @@ class ProgressMatrix(Callback):
         self._tracked_tasks: list[TaskKey] = []
 
     def _start(self, dsk: Graph):
-        self._status.initialize(dsk)
+        """
+        When a computation graph is received, initialize the status and display.
+        """
+        # Identify the tasks that should be tracked when computing the providing Dask
+        # object. If a different Dask object is computed in this context, it will return
+        # no tasks and we should avoid displaying an empty progress matrix.
+        self._tracked_tasks = [k for k in dsk if self._is_tracked_task(k)]
+        if not self._tracked_tasks:
+            return
+
+        self._status.initialize(self._tracked_tasks)
         self._display.update(self._status.state)
 
     def _pretask(self, key: TaskKey, dsk: Graph, state: State):
+        if key not in self._tracked_tasks:
+            return
+
         self._status.start_task(key)
         self._display.update(self._status.state)
 
     def _posttask(
         self, key: TaskKey, result: NDArray, dsk: Graph, state: State, id: int
     ):
+        if key not in self._tracked_tasks:
+            return
+
         self._status.finish_task(key)
         self._display.update(self._status.state)
 
     def _finish(self, dsk: Graph, state: State, errored: bool):
+        # If we're not currently tracking any tasks, we must be computing a different
+        # Dask object and shouldn't display an empty progress matrix.
+        if not self._tracked_tasks:
+            return
+
         self._display.update(
             self._status.completed_state,
             complete=True,
@@ -68,3 +88,13 @@ class ProgressMatrix(Callback):
     def __exit__(self, *args):
         super().__exit__(*args)
         self._display.__exit__(*args)
+
+    def _is_tracked_task(self, key: TaskKey) -> bool:
+        """
+        Check whether the given task should be tracked.
+
+        This filters out tasks that are intermediate or unrelated to the tracked Dask
+        object. Only tasks that contribute directly to the final Dask object will return
+        True.
+        """
+        return isinstance(key, tuple) and key[0] == self._obj.name

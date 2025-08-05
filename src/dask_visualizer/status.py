@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Literal
 
 import numpy as np
-from dask_visualizer.types import Graph, TaskKey
+from dask_visualizer.types import TaskKey
 
 
 class ComputationState(Enum):
@@ -58,27 +58,14 @@ class ComputationStatus:
         # The completed state of each chunk, depending on the mode
         self.completed_state = np.zeros(shape)
 
-    def _is_tracked_task(self, key: TaskKey) -> bool:
-        """
-        Check whether the given task should be tracked.
-
-        This filters out intermediate tasks.
-        """
-        return isinstance(key, tuple) and key[0] == self._obj.name
-
-    def initialize(self, dsk: Graph):
+    def initialize(self, task_keys: tuple[int, ...]):
         """Triggered by the start of a computation."""
-        # TODO: If the computation doesn't match the passed array, there will be no task
-        # chunks. Handle that.
-        chunk_indexes = [tuple(k[-2:]) for k in dsk if self._is_tracked_task(k)]
+        chunk_indexes = [tuple(k[-2:]) for k in task_keys]
         for chunk_index, num_tasks in Counter(chunk_indexes).items():
             self._chunks[chunk_index] = ComputationChunk(num_tasks)
 
-    def start_task(self, key: TaskKey):
+    def start_task(self, key: TaskKey) -> None:
         """Triggered when a task is started."""
-        if not self._is_tracked_task(key):
-            return
-
         # Mark the task at the (x, y) slice as started
         chunk_index = tuple(key[-2:])
         computation = self._chunks[chunk_index]
@@ -87,11 +74,8 @@ class ComputationStatus:
         # Mark the block's current state
         self.state[chunk_index] = computation.state.value
 
-    def finish_task(self, key: TaskKey):
+    def finish_task(self, key: TaskKey) -> None:
         """Triggered when a task is finished."""
-        if not self._is_tracked_task(key):
-            return
-
         # Mark the task at the (x, y) slice as completed
         chunk_index = tuple(key[-2:])
         computation = self._chunks[chunk_index]
