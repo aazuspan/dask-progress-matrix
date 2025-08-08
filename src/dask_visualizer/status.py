@@ -42,7 +42,11 @@ class ComputationStatus:
     """
 
     def __init__(
-        self, shape: tuple[int, int], mode: Literal["index", "elapsed"] = "index"
+        self,
+        tasks: set[TaskKey],
+        *,
+        shape: tuple[int, int],
+        mode: Literal["index", "elapsed"] = "index",
     ):
         self._mode = mode
 
@@ -50,7 +54,7 @@ class ComputationStatus:
         self._current_idx = 0
 
         # A mapping from (x, y) chunk indices to computation chunks
-        self._chunks: dict[tuple[int, int], ComputationChunk] = {}
+        self._chunks = self._initialize_chunks(tasks)
 
         # The current integer-encoded computation state of each chunk
         self.state = np.zeros(shape)
@@ -58,11 +62,17 @@ class ComputationStatus:
         # The completed state of each chunk, depending on the mode
         self.completed_state = np.zeros(shape)
 
-    def initialize(self, task_keys: tuple[int, ...]):
+    def _initialize_chunks(
+        self, tasks: set[TaskKey]
+    ) -> dict[tuple[int, int], ComputationChunk]:
         """Triggered by the start of a computation."""
-        chunk_indexes = [tuple(k[-2:]) for k in task_keys]
+        chunks = {}
+
+        chunk_indexes = [tuple(k[-2:]) for k in tasks]
         for chunk_index, num_tasks in Counter(chunk_indexes).items():
-            self._chunks[chunk_index] = ComputationChunk(num_tasks)
+            chunks[chunk_index] = ComputationChunk(num_tasks)
+
+        return chunks
 
     def start_task(self, key: TaskKey) -> None:
         """Triggered when a task is started."""

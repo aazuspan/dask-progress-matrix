@@ -18,13 +18,16 @@ from rich_pixels import Pixels
 class ComputationDisplay:
     def __init__(
         self,
+        *,
         shape: tuple[int, int],
         mode: Literal["index", "elapsed"],
         width: int = 20,
         cmap: str = "viridis",
+        show_legend: bool = True,
     ):
         self._mode = mode
         self._width = width
+        self._show_legend = show_legend
         self._height = self._compute_height(shape)
         self._cmap = colormaps.get_cmap(cmap)
         self._legend = self._generate_legend()
@@ -56,13 +59,11 @@ class ComputationDisplay:
         else:
             legend = self._legend
 
-        self._live.update(
-            Group(
-                legend,
-                Text("\n"),
-                self._generate_image(state),
-            )
-        )
+        content = [self._generate_image(state)]
+        if self._show_legend:
+            content = [legend, Text("\n"), *content]
+
+        self._live.update(Group(*content))
 
     def _generate_image(self, array: NDArray) -> Pixels:
         """Convert a state array into a renderable, color-mapped terminal image."""
