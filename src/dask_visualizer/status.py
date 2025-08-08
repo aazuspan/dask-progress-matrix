@@ -4,9 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Literal
 
-import dask.array
 import numpy as np
-from dask.layers import ArraySliceDep
 from dask_visualizer.types import Graph, TaskKey
 
 
@@ -44,25 +42,21 @@ class ComputationStatus:
     """
 
     def __init__(
-        self, obj: dask.array.Array, mode: Literal["index", "elapsed"] = "index"
+        self, shape: tuple[int, int], mode: Literal["index", "elapsed"] = "index"
     ):
-        self._obj = obj
         self._mode = mode
 
         # Track the sequential index of the last completed chunk
         self._current_idx = 0
 
-        # An indexer from (x, y) chunk indexes to array indexes
-        self._chunk_indexer = ArraySliceDep(obj.chunks[-2:])
-
         # A mapping from (x, y) chunk indices to computation chunks
         self._chunks: dict[tuple[int, int], ComputationChunk] = {}
 
-        # The current integer-encoded computation state of each block
-        self.state = np.zeros(self._chunk_indexer.numblocks)
+        # The current integer-encoded computation state of each chunk
+        self.state = np.zeros(shape)
 
-        # The completed state of each block, depending on the mode
-        self.completed_state = np.zeros(self._chunk_indexer.numblocks)
+        # The completed state of each chunk, depending on the mode
+        self.completed_state = np.zeros(shape)
 
     def _is_tracked_task(self, key: TaskKey) -> bool:
         """

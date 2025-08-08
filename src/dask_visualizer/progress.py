@@ -30,8 +30,15 @@ class ProgressMatrix(Callback):
     ):
         obj = extract_dask_array(obj)
         self._mode = mode
-        self._status = ComputationStatus(obj, mode=mode)
-        self._display = ComputationDisplay(obj, mode=mode, cmap=cmap, width=width)
+
+        # The (x, y) shape of the object in chunks
+        shape = [len(chunk) for chunk in obj.chunks[-2:]]
+        self._status = ComputationStatus(shape, mode=mode)
+        self._display = ComputationDisplay(shape, mode=mode, cmap=cmap, width=width)
+
+        # Tasks will be registered when a computation is started within the progress
+        # context.
+        self._tracked_tasks: list[TaskKey] = []
 
     def _start(self, dsk: Graph):
         self._status.initialize(dsk)

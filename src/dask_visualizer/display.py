@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Literal
 
-import dask
 import numpy as np
 from dask_visualizer.status import ComputationState
 from matplotlib import colormaps
@@ -19,15 +18,14 @@ from rich_pixels import Pixels
 class ComputationDisplay:
     def __init__(
         self,
-        obj: dask.array.Array,
+        shape: tuple[int, int],
         mode: Literal["index", "elapsed"],
         width: int = 20,
         cmap: str = "viridis",
     ):
-        self._obj = obj
         self._mode = mode
         self._width = width
-        self._height = self._compute_height(obj.shape)
+        self._height = self._compute_height(shape)
         self._cmap = colormaps.get_cmap(cmap)
         self._legend = self._generate_legend()
         self._live = Live()
@@ -38,9 +36,14 @@ class ComputationDisplay:
     def __exit__(self, *args):
         self._live.__exit__(*args)
 
-    def _compute_height(self, array_shape):
-        array_height, array_width = array_shape[-2:]
-        array_aspect = array_height / array_width
+    def _compute_height(self, shape: tuple[int, int]):
+        """
+        Compute the display height in characters from the aspect ratio of chunks.
+
+        Note that each chunk is displayed as a square, regardless of its actual shape.
+        """
+        height, width = shape
+        array_aspect = height / width
         return int(array_aspect * self._width)
 
     def update(self, state: NDArray, complete=False):
