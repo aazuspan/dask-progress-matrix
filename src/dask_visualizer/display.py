@@ -15,6 +15,8 @@ from rich.text import Text
 
 
 class ComputationDisplay:
+    _chunk_width = 2
+
     def __init__(
         self,
         *,
@@ -28,7 +30,7 @@ class ComputationDisplay:
         self._mode = mode
         self._show_legend = show_legend
         self._scale = scale or self._calculate_scale(shape[1], target_width)
-        self._width = self._scale * shape[1] * 2
+        self._width = self._scale * shape[1] * self._chunk_width
         self._cmap = colormaps.get_cmap(cmap)
         self._legend = self._generate_legend()
         self._live = Live()
@@ -51,7 +53,7 @@ class ComputationDisplay:
 
         content = [self._render_array(state)]
         if self._show_legend:
-            content = [legend, Text("\n"), *content]
+            content = [legend, Text(""), *content]
 
         self._live.update(Group(*content))
 
@@ -132,7 +134,10 @@ class ComputationDisplay:
                 rgba = self._cmap(block)
                 c = self._get_color(rgba)
                 line_segments.append(
-                    Segment("  " * self._scale, style=Style.parse(f"on {c}"))
+                    Segment(
+                        " " * self._chunk_width * self._scale,
+                        style=Style.parse(f"on {c}"),
+                    )
                 )
 
             for _ in range(self._scale):
@@ -141,19 +146,11 @@ class ComputationDisplay:
 
         return Segments(segments)
 
-    @staticmethod
-    def _get_color(pixel: tuple[float, float, float, float]) -> str | None:
-        """Convert an RGBA tuple in range [0, 1] to a CSS RGB string."""
-        r, g, b, a = [int(p * 255) for p in pixel]
-        return f"rgb({r},{g},{b})"
-
-    @staticmethod
-    def _calculate_scale(width_chunks: int, target_width: int) -> int:
+    def _calculate_scale(self, width_chunks: int, target_width: int) -> int:
         """
         Chose a scale that renders the given chunks nearest to the target width.
         """
-        chars_per_chunk = 2
-        over = max(int(target_width // width_chunks / chars_per_chunk), 1)
+        over = max(int(target_width // width_chunks / self._chunk_width), 1)
         under = max(over - 1, 1)
 
         # If they calculate to the same scale because the minimum width is larger than
@@ -163,9 +160,15 @@ class ComputationDisplay:
 
         # Choose the scale with the lower error from the target width, or the smaller
         # scale if they're equal.
-        over_error = abs(target_width - over * width_chunks * chars_per_chunk)
-        under_error = abs(target_width - under * width_chunks * chars_per_chunk)
+        over_error = abs(target_width - over * width_chunks * self._chunk_width)
+        under_error = abs(target_width - under * width_chunks * self._chunk_width)
 
         if under_error <= over_error:
             return under
         return over
+
+    @staticmethod
+    def _get_color(pixel: tuple[float, float, float, float]) -> str | None:
+        """Convert an RGBA tuple in range [0, 1] to a CSS RGB string."""
+        r, g, b, a = [int(p * 255) for p in pixel]
+        return f"rgb({r},{g},{b})"
