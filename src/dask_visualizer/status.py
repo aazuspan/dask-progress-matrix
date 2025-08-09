@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Literal
 
 import numpy as np
-from dask_visualizer.types import TaskKey
+from dask_visualizer.types import IndexedTaskKey
 
 
 class ComputationState(Enum):
@@ -41,7 +41,7 @@ class ComputationStatus:
 
     def __init__(
         self,
-        tasks: set[TaskKey],
+        tasks: set[IndexedTaskKey],
         *,
         shape: tuple[int, int],
         mode: Literal["index", "elapsed"] = "index",
@@ -61,31 +61,31 @@ class ComputationStatus:
         self.completed_state = np.zeros(shape)
 
     def _initialize_chunks(
-        self, tasks: set[TaskKey]
+        self, tasks: set[IndexedTaskKey]
     ) -> dict[tuple[int, int], ComputationChunk]:
         """Triggered by the start of a computation."""
         chunks = {}
 
-        chunk_indexes = [tuple(k[-2:]) for k in tasks]
+        chunk_indexes = [k[-2:] for k in tasks]
         for chunk_index, num_tasks in Counter(chunk_indexes).items():
             chunks[chunk_index] = ComputationChunk(num_tasks)
 
         return chunks
 
-    def start_task(self, key: TaskKey) -> None:
+    def start_task(self, key: IndexedTaskKey) -> None:
         """Triggered when a task is started."""
         # Mark the task at the (x, y) slice as started
-        chunk_index = tuple(key[-2:])
+        chunk_index = key[-2:]
         computation = self._chunks[chunk_index]
         computation.start()
 
         # Mark the block's current state
         self.state[chunk_index] = computation.state.value
 
-    def finish_task(self, key: TaskKey) -> None:
+    def finish_task(self, key: IndexedTaskKey) -> None:
         """Triggered when a task is finished."""
         # Mark the task at the (x, y) slice as completed
-        chunk_index = tuple(key[-2:])
+        chunk_index = key[-2:]
         computation = self._chunks[chunk_index]
         computation.finish()
 

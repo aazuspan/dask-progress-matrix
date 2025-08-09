@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, TypeGuard
 
 from dask.diagnostics import Callback
 from dask_visualizer.display import ComputationDisplay
 from dask_visualizer.status import ComputationStatus
-from dask_visualizer.types import Graph, State, TaskKey
+from dask_visualizer.types import Graph, IndexedTaskKey, State, TaskKey
 from dask_visualizer.utils import get_chunk_shape, get_terminal_tasks
 from numpy.typing import NDArray
 
@@ -66,7 +66,7 @@ class ProgressMatrix(Callback):
 
         # Tasks will be registered when a computation is started within the progress
         # context.
-        self._terminal_tasks: list[TaskKey] = []
+        self._terminal_tasks: set[IndexedTaskKey] = set()
 
     def _start(self, dsk: Graph):
         """
@@ -94,7 +94,7 @@ class ProgressMatrix(Callback):
         self._display.update(self._status.state)
 
     def _pretask(self, key: TaskKey, dsk: Graph, state: State):
-        if key not in self._terminal_tasks:
+        if not self._is_terminal_task(key):
             return
 
         self._status.start_task(key)
@@ -103,7 +103,7 @@ class ProgressMatrix(Callback):
     def _posttask(
         self, key: TaskKey, result: NDArray, dsk: Graph, state: State, id: int
     ):
-        if key not in self._terminal_tasks:
+        if not self._is_terminal_task(key):
             return
 
         self._status.finish_task(key)
@@ -126,3 +126,6 @@ class ProgressMatrix(Callback):
         # the display won't be initialized.
         if getattr(self, "_display", None):
             self._display.__exit__(*args)
+
+    def _is_terminal_task(self, key: TaskKey) -> TypeGuard[IndexedTaskKey]:
+        return key in self._terminal_tasks

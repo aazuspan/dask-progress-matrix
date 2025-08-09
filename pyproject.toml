@@ -23,6 +23,7 @@ dev = [
     "ipykernel",
     "ipywidgets",
     "matplotlib",
+    "mypy>=1.17.1",
     "pre-commit",
     "rioxarray",
     "ruff",
@@ -33,3 +34,6 @@ dev = [
 
 [tool.ruff.lint]
 select = ["E", "I", "F", "B", "FA", "UP", "PT", "Q", "RET", "SIM", "PERF"]
+
+[tool.mypy]
+disable_error_code = ["import-untyped"]

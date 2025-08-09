@@ -7,7 +7,7 @@ import numpy as np
 from dask_visualizer.status import ComputationState
 from matplotlib import colormaps
 from numpy.typing import NDArray
-from rich.console import Group
+from rich.console import Group, RenderableType
 from rich.live import Live
 from rich.segment import Segment, Segments
 from rich.style import Style
@@ -49,6 +49,7 @@ class ComputationDisplay:
         self._live.__exit__(exc_type, exc_val, exc_tb)
 
     def update(self, state: NDArray, complete=False):
+        legend: RenderableType
         # When complete, display the appropriate colorbar and normalize the state for
         # drawing.
         if complete:
@@ -58,7 +59,7 @@ class ComputationDisplay:
         else:
             legend = self._legend
 
-        content = [self._render_array(state)]
+        content: list[RenderableType] = [self._render_array(state)]
         if self._show_legend:
             content = [legend, Text(""), *content]
 
@@ -118,20 +119,25 @@ class ComputationDisplay:
         cbar_min = format(min_val, cbar_format)
         cbar_max = format(max_val, cbar_format)
 
-        gradient = Text("").join(
+        gradient = Segments(
             [
-                Text(" ", style=f"on {self._get_color(self._cmap(i))}")
+                Segment(" ", style=Style.parse(f"on {self._get_color(self._cmap(i))}"))
                 for i in np.linspace(0.0, 1.0, self._width)
             ]
         )
 
         colorbar = Table(
-            title=cbar_title, width=self._width, padding=0, show_edge=False, box=None
+            title=cbar_title,
+            width=self._width,
+            padding=0,
+            pad_edge=False,
+            show_edge=False,
+            box=None,
         )
         colorbar.add_column(cbar_min, justify="left", header_style="not bold")
         colorbar.add_column(cbar_max, justify="right", header_style="not bold")
 
-        return Group(colorbar, gradient)
+        return Group(colorbar, gradient, Text(""))
 
     def _render_array(self, array: NDArray) -> Segments:
         segments = []

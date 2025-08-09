@@ -4,7 +4,7 @@ import random
 import time
 
 import dask.array
-from dask_visualizer.types import Graph, TaskKey
+from dask_visualizer.types import Graph, IndexedTaskKey
 
 
 def generate_slow_dask_array(
@@ -28,7 +28,7 @@ def generate_slow_dask_array(
     )
 
 
-def get_terminal_tasks(dsk: Graph) -> set[TaskKey]:
+def get_terminal_tasks(dsk: Graph) -> set[IndexedTaskKey]:
     """
     Find the terminal tasks in a lowered Dask graph and return their keys.
 
@@ -46,7 +46,7 @@ def get_terminal_tasks(dsk: Graph) -> set[TaskKey]:
     return terminal_tasks
 
 
-def get_chunk_shape(tasks: set[TaskKey]) -> tuple[int, int]:
+def get_chunk_shape(tasks: set[IndexedTaskKey]) -> tuple[int, int]:
     """
     Get the number of chunks in an output computation from a set of task keys.
 
