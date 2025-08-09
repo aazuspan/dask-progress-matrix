@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import TracebackType
 from typing import Literal
 
 import numpy as np
@@ -38,8 +39,14 @@ class ComputationDisplay:
     def __enter__(self):
         self._live.__enter__()
 
-    def __exit__(self, *args):
-        self._live.__exit__(*args)
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None = None,
+        exc_val: BaseException | None = None,
+        exc_tb: TracebackType | None = None,
+    ):
+        # Live requires all three arguments, but ignores them
+        self._live.__exit__(exc_type, exc_val, exc_tb)
 
     def update(self, state: NDArray, complete=False):
         # When complete, display the appropriate colorbar and normalize the state for
@@ -55,7 +62,9 @@ class ComputationDisplay:
         if self._show_legend:
             content = [legend, Text(""), *content]
 
-        self._live.update(Group(*content))
+        # Force a refresh when completed to avoid exiting the display context before
+        # rendering the final state in a Jupyter notebook.
+        self._live.update(Group(*content), refresh=complete)
 
     def _generate_legend(self) -> Table:
         """Generate a legend for the colormap."""

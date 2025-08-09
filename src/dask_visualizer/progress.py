@@ -114,7 +114,15 @@ class ProgressMatrix(Callback):
             self._status.completed_state,
             complete=True,
         )
+        # Exit the display after finishing the computation to allow multiple
+        # computations within a single context without interfering.
+        self._display.__exit__()
 
     def __exit__(self, *args):
         super().__exit__(*args)
-        self._display.__exit__(*args)
+        # Exit the display context when the progress context is closed. This will have
+        # no effect if the computation finished since the display already exited, but
+        # gracefully stops the display if there's an error. If there was no computation,
+        # the display won't be initialized.
+        if getattr(self, "_display", None):
+            self._display.__exit__(*args)
