@@ -19,13 +19,13 @@ class ProgressMatrix(Callback):
         self,
         *,
         cmap: str = "viridis",
-        width: int = 20,
+        scale: int = 1,
         mode: Literal["index", "elapsed"] = "index",
         show_legend: bool = True,
     ):
         self._mode = mode
         self._cmap = cmap
-        self._width = width
+        self._scale = scale
         self._show_legend = show_legend
 
         # Tasks will be registered when a computation is started within the progress
@@ -49,7 +49,7 @@ class ProgressMatrix(Callback):
             shape=shape,
             mode=self._mode,
             cmap=self._cmap,
-            width=self._width,
+            scale=self._scale,
             show_legend=self._show_legend,
         )
 

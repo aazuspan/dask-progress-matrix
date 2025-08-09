@@ -5,14 +5,13 @@ from typing import Literal
 import numpy as np
 from dask_visualizer.status import ComputationState
 from matplotlib import colormaps
-from matplotlib.colors import Colormap
 from numpy.typing import NDArray
-from PIL import Image
 from rich.console import Group
 from rich.live import Live
+from rich.segment import Segment, Segments
+from rich.style import Style
 from rich.table import Table
 from rich.text import Text
-from rich_pixels import Pixels
 
 
 class ComputationDisplay:
@@ -21,14 +20,14 @@ class ComputationDisplay:
         *,
         shape: tuple[int, int],
         mode: Literal["index", "elapsed"],
-        width: int = 20,
+        scale: int = 1,
         cmap: str = "viridis",
         show_legend: bool = True,
     ):
         self._mode = mode
-        self._width = width
         self._show_legend = show_legend
-        self._height = self._compute_height(shape)
+        self._scale = scale
+        self._width = scale * shape[1] * 2
         self._cmap = colormaps.get_cmap(cmap)
         self._legend = self._generate_legend()
         self._live = Live()
@@ -38,16 +37,6 @@ class ComputationDisplay:
 
     def __exit__(self, *args):
         self._live.__exit__(*args)
-
-    def _compute_height(self, shape: tuple[int, int]):
-        """
-        Compute the display height in characters from the aspect ratio of chunks.
-
-        Note that each chunk is displayed as a square, regardless of its actual shape.
-        """
-        height, width = shape
-        array_aspect = height / width
-        return int(array_aspect * self._width)
 
     def update(self, state: NDArray, complete=False):
         # When complete, display the appropriate colorbar and normalize the state for
@@ -59,21 +48,16 @@ class ComputationDisplay:
         else:
             legend = self._legend
 
-        content = [self._generate_image(state)]
+        content = [self._render_array(state)]
         if self._show_legend:
             content = [legend, Text("\n"), *content]
 
         self._live.update(Group(*content))
 
-    def _generate_image(self, array: NDArray) -> Pixels:
-        """Convert a state array into a renderable, color-mapped terminal image."""
-        image = Image.fromarray(_visualize_array(array, cmap=self._cmap))
-        return Pixels.from_image(image, resize=(self._width, self._height))
-
     def _generate_legend(self) -> Table:
         """Generate a legend for the colormap."""
         colors = [
-            _get_color(self._cmap(i.value))
+            self._get_color(self._cmap(i.value))
             for i in (
                 ComputationState.WAITING,
                 ComputationState.STARTED,
@@ -124,7 +108,7 @@ class ComputationDisplay:
 
         gradient = Text("").join(
             [
-                Text(" ", style=f"on {_get_color(self._cmap(i))}")
+                Text(" ", style=f"on {self._get_color(self._cmap(i))}")
                 for i in np.linspace(0.0, 1.0, self._width)
             ]
         )
@@ -137,16 +121,27 @@ class ComputationDisplay:
 
         return Group(colorbar, gradient)
 
+    def _render_array(self, array: NDArray) -> Segments:
+        segments = []
 
-def _visualize_array(arr: np.ndarray, cmap: Colormap) -> np.ndarray:
-    """
-    Convert a 2D NumPy array in the range [0, 1] to a byte RGBA image.
-    """
-    img = cmap(arr)
-    return (img * 255).astype(np.uint8)
+        for line in array:
+            line_segments = []
 
+            for block in line:
+                rgba = self._cmap(block)
+                c = self._get_color(rgba)
+                line_segments.append(
+                    Segment("  " * self._scale, style=Style.parse(f"on {c}"))
+                )
 
-def _get_color(pixel: tuple[float, float, float, float]) -> str | None:
-    """Convert an RGBA tuple in range [0, 1] to a CSS RGB string."""
-    r, g, b, a = [int(p * 255) for p in pixel]
-    return f"rgb({r},{g},{b})"
+            for _ in range(self._scale):
+                segments += line_segments
+                segments.append(Segment("\n"))
+
+        return Segments(segments)
+
+    @staticmethod
+    def _get_color(pixel: tuple[float, float, float, float]) -> str | None:
+        """Convert an RGBA tuple in range [0, 1] to a CSS RGB string."""
+        r, g, b, a = [int(p * 255) for p in pixel]
+        return f"rgb({r},{g},{b})"
