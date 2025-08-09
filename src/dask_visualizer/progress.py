@@ -13,6 +13,32 @@ from numpy.typing import NDArray
 class ProgressMatrix(Callback):
     """
     A progress matrix for tracking computations of 2D and 3D Dask objects by chunk.
+
+    Parameters
+    ----------
+    cmap : str, default "viridis"
+        The colormap to use for the progress matrix display.
+    scale : int, default 1
+        The height of each chunk in the progress matrix, in terminal characters.
+    mode : {"index", "elapsed"}, default "index"
+        The type of summary displayed after a finished computation:
+        - "index": Shows the order that each chunk was computed in.
+        - "elapsed": Shows the elapsed time between starting and ending each chunk.
+    show_legend : bool, default True
+        If true, a legend will be displayed on top of the progress matrix to explain
+        color encodings.
+
+    Examples
+    --------
+
+    Run a computation within a `ProgressMatrix` context to visualize the progress of
+    each chunk.
+
+    >>> import dask.array as da
+    >>> from dask_visualizer import ProgressMatrix
+    >>> with ProgressMatrix(cmap="inferno", scale=1, mode="index"):
+    ...     x = da.random.random((128, 128), chunks=(8, 8))
+    ...     x.compute()
     """
 
     def __init__(
