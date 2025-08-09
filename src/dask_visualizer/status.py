@@ -20,18 +20,16 @@ class ComputationChunk:
 
     tasks_remaining: int
     state: ComputationState = ComputationState.WAITING
-    completed_idx: int | None = None
 
     def start(self):
         """Start one task of the computation."""
         self.state = ComputationState.STARTED
         self.start_time = time.time()
 
-    def finish(self, idx: int):
+    def finish(self):
         """Finish one task of the computation."""
         self.tasks_remaining -= 1
         if self.tasks_remaining == 0:
-            self.completed_idx = idx
             self.state = ComputationState.COMPLETE
             self.end_time = time.time()
 
@@ -89,7 +87,7 @@ class ComputationStatus:
         # Mark the task at the (x, y) slice as completed
         chunk_index = tuple(key[-2:])
         computation = self._chunks[chunk_index]
-        computation.finish(self._current_idx)
+        computation.finish()
 
         # Update the block's current state
         self.state[chunk_index] = computation.state.value
