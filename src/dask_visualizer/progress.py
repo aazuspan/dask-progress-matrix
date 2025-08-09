@@ -18,15 +18,23 @@ class ProgressMatrix(Callback):
     ----------
     cmap : str, default "viridis"
         The colormap to use for the progress matrix display.
-    scale : int, default 1
-        The height of each chunk in the progress matrix, in terminal characters.
+    scale : int, optional
+        The height of each chunk in the progress matrix, in terminal characters. If not
+        provided, scale will be calculated to render nearest to the provided
+        `target_width`.
     mode : {"index", "elapsed"}, default "index"
         The type of summary displayed after a finished computation:
-        - "index": Shows the order that each chunk was computed in.
-        - "elapsed": Shows the elapsed time between starting and ending each chunk.
+        - `"index"`: Shows the order that each chunk was computed in.
+        - `"elapsed"`: Shows the elapsed time between starting and ending each chunk.
     show_legend : bool, default True
         If true, a legend will be displayed on top of the progress matrix to explain
         color encodings.
+    target_width : int, default 24
+        The desired width in characters to render the matrix. If `scale` is not
+        provided, it will be calculated to render blocks as close as possible to the
+        target width. Because each block is rendered to a mimimum of 2 characters, it
+        may not be possible to render to the exact target width. Ignored if `scale` is
+        provided.
 
     Examples
     --------
@@ -45,13 +53,15 @@ class ProgressMatrix(Callback):
         self,
         *,
         cmap: str = "viridis",
-        scale: int = 1,
         mode: Literal["index", "elapsed"] = "index",
+        scale: int | None = None,
+        target_width: int = 24,
         show_legend: bool = True,
     ):
-        self._mode = mode
         self._cmap = cmap
+        self._mode = mode
         self._scale = scale
+        self._target_width = target_width
         self._show_legend = show_legend
 
         # Tasks will be registered when a computation is started within the progress
@@ -73,9 +83,10 @@ class ProgressMatrix(Callback):
 
         self._display = ComputationDisplay(
             shape=shape,
-            mode=self._mode,
             cmap=self._cmap,
+            mode=self._mode,
             scale=self._scale,
+            target_width=self._target_width,
             show_legend=self._show_legend,
         )
 

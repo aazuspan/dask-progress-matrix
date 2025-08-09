@@ -20,14 +20,15 @@ class ComputationDisplay:
         *,
         shape: tuple[int, int],
         mode: Literal["index", "elapsed"],
-        scale: int = 1,
+        scale: int | None = None,
         cmap: str = "viridis",
         show_legend: bool = True,
+        target_width: int = 24,
     ):
         self._mode = mode
         self._show_legend = show_legend
-        self._scale = scale
-        self._width = scale * shape[1] * 2
+        self._scale = scale or self._calculate_scale(shape[1], target_width)
+        self._width = self._scale * shape[1] * 2
         self._cmap = colormaps.get_cmap(cmap)
         self._legend = self._generate_legend()
         self._live = Live()
@@ -145,3 +146,26 @@ class ComputationDisplay:
         """Convert an RGBA tuple in range [0, 1] to a CSS RGB string."""
         r, g, b, a = [int(p * 255) for p in pixel]
         return f"rgb({r},{g},{b})"
+
+    @staticmethod
+    def _calculate_scale(width_chunks: int, target_width: int) -> int:
+        """
+        Chose a scale that renders the given chunks nearest to the target width.
+        """
+        chars_per_chunk = 2
+        over = max(int(target_width // width_chunks / chars_per_chunk), 1)
+        under = max(over - 1, 1)
+
+        # If they calculate to the same scale because the minimum width is larger than
+        # the target width, return either.
+        if over == under:
+            return under
+
+        # Choose the scale with the lower error from the target width, or the smaller
+        # scale if they're equal.
+        over_error = abs(target_width - over * width_chunks * chars_per_chunk)
+        under_error = abs(target_width - under * width_chunks * chars_per_chunk)
+
+        if under_error <= over_error:
+            return under
+        return over
