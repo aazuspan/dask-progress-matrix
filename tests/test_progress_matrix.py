@@ -84,3 +84,12 @@ def test_progress_matrix_xarray(as_dataarray: bool, svg_snapshot):
     with CapturedProgressMatrix(target_width=32) as captured:
         ds.compute(num_workers=1)
         svg_snapshot(captured.svg)
+
+
+def test_progress_matrix_with_no_tasks(svg_snapshot):
+    """Test that a computation with no terminal tasks is ignored without errors."""
+    da = dask.array.zeros((64,), chunks=(64,))
+
+    with CapturedProgressMatrix() as captured:
+        da.compute(num_workers=1)
+        svg_snapshot(captured.svg)

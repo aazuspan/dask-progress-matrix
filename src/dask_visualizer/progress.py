@@ -89,6 +89,12 @@ class ProgressMatrix(Callback):
         # Register the terminal tasks that will correspond to chunks in the output
         # array for this computation.
         self._terminal_tasks = get_terminal_tasks(dsk)
+
+        # It's possible for a computation to have no indexed tasks, e.g. a single chunk
+        # Dask array. In that case, we shouldn't display anything.
+        if not self._terminal_tasks:
+            return
+
         task_indexes = [index_2d_from_key(k) for k in self._terminal_tasks]
         shape = get_chunk_shape(task_indexes)
 
@@ -117,6 +123,10 @@ class ProgressMatrix(Callback):
             self._display.update(self._status.state)
 
     def _finish(self, dsk: Graph, state: State, errored: bool):
+        # If there were no terminal tasks, the matrix was never initialized.
+        if not self._terminal_tasks:
+            return
+
         self._display.update(
             self._status.completed_state,
             complete=True,
