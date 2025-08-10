@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, TypeGuard
+from typing import Literal, TextIO, TypeGuard
 
 from dask.diagnostics import Callback
 from dask_visualizer.display import ComputationDisplay
@@ -35,6 +35,9 @@ class ProgressMatrix(Callback):
         target width. Because each block is rendered to a mimimum of 2 characters, it
         may not be possible to render to the exact target width. Ignored if `scale` is
         provided.
+    out : TextIO, optional
+        File object into which the the progress matrix will be written. If not provided,
+        `sys.stdout` is used.
 
     Examples
     --------
@@ -57,12 +60,14 @@ class ProgressMatrix(Callback):
         scale: int | None = None,
         target_width: int = 24,
         show_legend: bool = True,
+        out: TextIO | None = None,
     ):
         self._cmap = cmap
         self._mode = mode
         self._scale = scale
         self._target_width = target_width
         self._show_legend = show_legend
+        self._out = out
 
         # Tasks will be registered when a computation is started within the progress
         # context.
@@ -88,6 +93,7 @@ class ProgressMatrix(Callback):
             scale=self._scale,
             target_width=self._target_width,
             show_legend=self._show_legend,
+            out=self._out,
         )
 
         self._display.__enter__()

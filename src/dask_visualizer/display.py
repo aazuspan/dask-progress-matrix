@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Literal
+from typing import Literal, TextIO
 
 import numpy as np
 from dask_visualizer.status import ComputationState
 from matplotlib import colormaps
 from numpy.typing import NDArray
-from rich.console import Group, RenderableType
+from rich.console import Console, Group, RenderableType
 from rich.live import Live
 from rich.segment import Segment, Segments
 from rich.style import Style
@@ -27,6 +27,7 @@ class ComputationDisplay:
         cmap: str = "viridis",
         show_legend: bool = True,
         target_width: int = 24,
+        out: TextIO | None = None,
     ):
         self._mode = mode
         self._show_legend = show_legend
@@ -34,7 +35,7 @@ class ComputationDisplay:
         self._width = self._scale * shape[1] * self._chunk_width
         self._cmap = colormaps.get_cmap(cmap)
         self._legend = self._generate_legend()
-        self._live = Live()
+        self._live = Live(console=Console(file=out) if out is not None else None)
 
     def __enter__(self):
         self._live.__enter__()
