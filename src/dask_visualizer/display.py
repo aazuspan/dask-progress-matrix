@@ -34,8 +34,10 @@ class ComputationDisplay:
         self._scale = scale or self._calculate_scale(shape[1], target_width)
         self._width = self._scale * shape[1] * self._chunk_width
         self._cmap = colormaps.get_cmap(cmap)
-        self._legend = self._generate_legend()
-        self._live = Live(console=Console(file=out) if out is not None else None)
+        self._live = Live(
+            console=Console(file=out) if out is not None else None,
+            auto_refresh=False,
+        )
 
     def __enter__(self):
         self._live.__enter__()
@@ -64,9 +66,7 @@ class ComputationDisplay:
         if self._show_legend:
             content = [legend, Text(""), *content]
 
-        # Force a refresh when completed to avoid exiting the display context before
-        # rendering the final state in a Jupyter notebook.
-        self._live.update(Group(*content), refresh=complete)
+        self._live.update(Group(*content), refresh=True)
 
     def _generate_legend(self) -> Table:
         """Generate a legend for the colormap."""

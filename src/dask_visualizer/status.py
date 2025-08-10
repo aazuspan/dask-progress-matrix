@@ -72,18 +72,25 @@ class ComputationStatus:
 
         return chunks
 
-    def start_task(self, key: IndexedTaskKey) -> None:
-        """Triggered when a task is started."""
+    def start_task(self, key: IndexedTaskKey) -> bool:
+        """
+        Start a task and return whether the associated chunk changed state.
+        """
         # Mark the task at the (x, y) slice as started
         chunk_index = key[-2:]
         computation = self._chunks[chunk_index]
+        prev_state = computation.state.value
         computation.start()
 
         # Mark the block's current state
         self.state[chunk_index] = computation.state.value
 
-    def finish_task(self, key: IndexedTaskKey) -> None:
-        """Triggered when a task is finished."""
+        return prev_state != computation.state.value
+
+    def finish_task(self, key: IndexedTaskKey) -> bool:
+        """
+        Finish a task and return whether the associated chunk changed state.
+        """
         # Mark the task at the (x, y) slice as completed
         chunk_index = key[-2:]
         computation = self._chunks[chunk_index]
@@ -102,3 +109,6 @@ class ComputationStatus:
                 self.completed_state[chunk_index] = (
                     computation.end_time - computation.start_time
                 )
+            return True
+
+        return False

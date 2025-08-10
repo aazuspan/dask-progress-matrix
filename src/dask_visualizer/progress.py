@@ -103,8 +103,9 @@ class ProgressMatrix(Callback):
         if not self._is_terminal_task(key):
             return
 
-        self._status.start_task(key)
-        self._display.update(self._status.state)
+        changed_state = self._status.start_task(key)
+        if changed_state:
+            self._display.update(self._status.state)
 
     def _posttask(
         self, key: TaskKey, result: NDArray, dsk: Graph, state: State, id: int
@@ -112,8 +113,9 @@ class ProgressMatrix(Callback):
         if not self._is_terminal_task(key):
             return
 
-        self._status.finish_task(key)
-        self._display.update(self._status.state)
+        changed_state = self._status.finish_task(key)
+        if changed_state:
+            self._display.update(self._status.state)
 
     def _finish(self, dsk: Graph, state: State, errored: bool):
         self._display.update(
