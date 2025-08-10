@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Literal
 
 import numpy as np
-from dask_visualizer.types import IndexedTaskKey
+from dask_visualizer.types import ChunkIndex
 
 
 class ComputationState(Enum):
@@ -41,7 +41,7 @@ class ComputationStatus:
 
     def __init__(
         self,
-        tasks: set[IndexedTaskKey],
+        indexes: list[ChunkIndex],
         *,
         shape: tuple[int, int],
         mode: Literal["index", "elapsed"] = "index",
@@ -51,8 +51,8 @@ class ComputationStatus:
         # Track the sequential index of the last completed chunk
         self._current_idx = 0
 
-        # A mapping from (x, y) chunk indices to computation chunks
-        self._chunks = self._initialize_chunks(tasks)
+        # A mapping from (y, x) chunk indices to computation chunks
+        self._chunks = self._initialize_chunks(indexes)
 
         # The current integer-encoded computation state of each chunk
         self.state = np.zeros(shape)
@@ -61,23 +61,22 @@ class ComputationStatus:
         self.completed_state = np.zeros(shape)
 
     def _initialize_chunks(
-        self, tasks: set[IndexedTaskKey]
-    ) -> dict[tuple[int, int], ComputationChunk]:
+        self,
+        indexes: list[ChunkIndex],
+    ) -> dict[ChunkIndex, ComputationChunk]:
         """Triggered by the start of a computation."""
         chunks = {}
 
-        chunk_indexes = [k[-2:] for k in tasks]
-        for chunk_index, num_tasks in Counter(chunk_indexes).items():
+        for chunk_index, num_tasks in Counter(indexes).items():
             chunks[chunk_index] = ComputationChunk(num_tasks)
 
         return chunks
 
-    def start_task(self, key: IndexedTaskKey) -> bool:
+    def start_task(self, chunk_index: ChunkIndex) -> bool:
         """
         Start a task and return whether the associated chunk changed state.
         """
-        # Mark the task at the (x, y) slice as started
-        chunk_index = key[-2:]
+        # Mark the task at the (y, x) index as started
         computation = self._chunks[chunk_index]
         prev_state = computation.state.value
         computation.start()
@@ -87,12 +86,11 @@ class ComputationStatus:
 
         return prev_state != computation.state.value
 
-    def finish_task(self, key: IndexedTaskKey) -> bool:
+    def finish_task(self, chunk_index: ChunkIndex) -> bool:
         """
         Finish a task and return whether the associated chunk changed state.
         """
-        # Mark the task at the (x, y) slice as completed
-        chunk_index = key[-2:]
+        # Mark the task at the (y, x) slice as completed
         computation = self._chunks[chunk_index]
         computation.finish()
 

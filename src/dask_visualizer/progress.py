@@ -6,7 +6,7 @@ from dask.diagnostics import Callback
 from dask_visualizer.display import ComputationDisplay
 from dask_visualizer.status import ComputationStatus
 from dask_visualizer.types import Graph, IndexedTaskKey, State, TaskKey
-from dask_visualizer.utils import get_chunk_shape, get_terminal_tasks
+from dask_visualizer.utils import get_chunk_shape, get_terminal_tasks, index_2d_from_key
 from numpy.typing import NDArray
 
 
@@ -80,11 +80,10 @@ class ProgressMatrix(Callback):
         # Register the terminal tasks that will correspond to chunks in the output
         # array for this computation.
         self._terminal_tasks = get_terminal_tasks(dsk)
-        shape = get_chunk_shape(self._terminal_tasks)
+        task_indexes = [index_2d_from_key(k) for k in self._terminal_tasks]
+        shape = get_chunk_shape(task_indexes)
 
-        self._status = ComputationStatus(
-            self._terminal_tasks, shape=shape, mode=self._mode
-        )
+        self._status = ComputationStatus(task_indexes, shape=shape, mode=self._mode)
 
         self._display = ComputationDisplay(
             shape=shape,
@@ -103,7 +102,7 @@ class ProgressMatrix(Callback):
         if not self._is_terminal_task(key):
             return
 
-        changed_state = self._status.start_task(key)
+        changed_state = self._status.start_task(index_2d_from_key(key))
         if changed_state:
             self._display.update(self._status.state)
 
@@ -113,7 +112,7 @@ class ProgressMatrix(Callback):
         if not self._is_terminal_task(key):
             return
 
-        changed_state = self._status.finish_task(key)
+        changed_state = self._status.finish_task(index_2d_from_key(key))
         if changed_state:
             self._display.update(self._status.state)
 

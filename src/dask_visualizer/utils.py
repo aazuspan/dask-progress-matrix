@@ -4,7 +4,7 @@ import random
 import time
 
 import dask.array
-from dask_visualizer.types import Graph, IndexedTaskKey
+from dask_visualizer.types import ChunkIndex, Graph, IndexedTaskKey
 
 
 def generate_slow_dask_array(
@@ -46,13 +46,24 @@ def get_terminal_tasks(dsk: Graph) -> set[IndexedTaskKey]:
     return terminal_tasks
 
 
-def get_chunk_shape(tasks: set[IndexedTaskKey]) -> tuple[int, int]:
+def get_chunk_shape(indexes: list[ChunkIndex]) -> tuple[int, int]:
     """
-    Get the number of chunks in an output computation from a set of task keys.
+    Count the height and width chunks in an output computation from its 2D indexes.
+    """
+    y = len(set([i[0] for i in indexes]))
+    x = len(set([i[1] for i in indexes]))
+    return y, x
 
-    This assumes that there is at least one task for each chunk index, and their keys
-    follow the format (name, ..., y, x).
+
+def index_2d_from_key(key: IndexedTaskKey) -> ChunkIndex:
     """
-    ncols = len(set([t[-1] for t in tasks]))
-    nrows = len(set([t[-2] for t in tasks]))
-    return nrows, ncols
+    Parse a 2D index from a task key.
+
+    1D keys, e.g. (name, x) will be expanded to (1, x).
+    nD keyes, e.g. (name, ..., y, x) will be truncated to (y, x).
+    """
+    if len(key) < 2:
+        raise ValueError(f"The key {key} must contain at least 1 dimension.")
+    if len(key) == 2:
+        return (0, key[1])
+    return (key[-2], key[-1])

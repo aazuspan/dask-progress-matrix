@@ -1,9 +1,9 @@
 from typing import Any, Unpack
 
-ChunkIndex = tuple[Unpack[tuple[int, ...]], int, int]
-"""The (..., x, y) indices of a chunk within a computation."""
+ChunkIndex = tuple[int, int]
+"""The 2d indices for a chunk in a computation."""
 
-IndexedTaskKey = tuple[str, Unpack[ChunkIndex]]
+IndexedTaskKey = tuple[str, Unpack[tuple[int, Unpack[tuple[int, ...]]]]]
 """The task name and corresponding index of a Dask computation chunk."""
 
 TaskKey = str | IndexedTaskKey
