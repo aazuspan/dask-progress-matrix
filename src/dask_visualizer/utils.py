@@ -12,11 +12,13 @@ def generate_slow_dask_array(
 ) -> dask.array.Array:
     """
     Generate a lazily computed Dask array where each chunk's computation is delayed.
+
+    This can be used to simulate real work within a chunked computation.
     """
     da = dask.array.zeros(shape, chunks=chunks)
 
     def delayed_compute(chunk):
-        sleep_time = max(random.normalvariate(delay), 0) if randomize else delay
+        sleep_time = max(random.normalvariate(delay, delay), 0) if randomize else delay
 
         time.sleep(sleep_time)
         return chunk
