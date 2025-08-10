@@ -25,10 +25,13 @@ dev = [
     "matplotlib",
     "mypy>=1.17.1",
     "pre-commit",
+    "pytest>=8.4.1",
+    "pytest-textual-snapshot>=1.0.0",
     "rioxarray",
     "ruff",
     "sklearn-raster[datasets]",
     "sknnr",
+    "syrupy>=4.9.1",
     "xarray",
 ]
 

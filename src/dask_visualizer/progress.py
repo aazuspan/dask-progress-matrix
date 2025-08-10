@@ -69,6 +69,15 @@ class ProgressMatrix(Callback):
         self._show_legend = show_legend
         self._out = out
 
+        self._display = ComputationDisplay(
+            cmap=self._cmap,
+            mode=self._mode,
+            scale=self._scale,
+            target_width=self._target_width,
+            show_legend=self._show_legend,
+            out=self._out,
+        )
+
         # Tasks will be registered when a computation is started within the progress
         # context.
         self._terminal_tasks: set[IndexedTaskKey] = set()
@@ -85,16 +94,7 @@ class ProgressMatrix(Callback):
 
         self._status = ComputationStatus(task_indexes, shape=shape, mode=self._mode)
 
-        self._display = ComputationDisplay(
-            shape=shape,
-            cmap=self._cmap,
-            mode=self._mode,
-            scale=self._scale,
-            target_width=self._target_width,
-            show_legend=self._show_legend,
-            out=self._out,
-        )
-
+        self._display.initialize(shape)
         self._display.__enter__()
         self._display.update(self._status.state)
 

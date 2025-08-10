@@ -21,7 +21,6 @@ class ComputationDisplay:
     def __init__(
         self,
         *,
-        shape: tuple[int, int],
         mode: Literal["index", "elapsed"],
         scale: int | None = None,
         cmap: str = "viridis",
@@ -31,13 +30,25 @@ class ComputationDisplay:
     ):
         self._mode = mode
         self._show_legend = show_legend
-        self._scale = scale or self._calculate_scale(shape[1], target_width)
-        self._width = self._scale * shape[1] * self._chunk_width
+        self._scale = scale
+        self._target_width = target_width
         self._cmap = colormaps.get_cmap(cmap)
         self._live = Live(
             console=Console(file=out) if out is not None else None,
             auto_refresh=False,
         )
+
+    def initialize(self, shape: tuple[int, int]) -> None:
+        """
+        Initialize the display to a given shape.
+
+        This must be called prior to updating the display.
+        """
+        self._computed_scale = self._scale or self._calculate_scale(
+            shape[1], self._target_width
+        )
+        self._width = self._computed_scale * shape[1] * self._chunk_width
+        self._legend = self._generate_legend()
 
     def __enter__(self):
         self._live.__enter__()
@@ -151,12 +162,12 @@ class ComputationDisplay:
                 c = self._get_color(rgba)
                 line_segments.append(
                     Segment(
-                        " " * self._chunk_width * self._scale,
+                        " " * self._chunk_width * self._computed_scale,
                         style=Style.parse(f"on {c}"),
                     )
                 )
 
-            for _ in range(self._scale):
+            for _ in range(self._computed_scale):
                 segments += line_segments
                 segments.append(Segment("\n"))
 
