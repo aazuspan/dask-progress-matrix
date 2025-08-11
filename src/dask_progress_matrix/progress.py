@@ -3,16 +3,21 @@ from __future__ import annotations
 from typing import Literal, TextIO, TypeGuard
 
 from dask.diagnostics import Callback
-from dask_visualizer.display import ComputationDisplay
-from dask_visualizer.status import ComputationStatus
-from dask_visualizer.types import Graph, IndexedTaskKey, State, TaskKey
-from dask_visualizer.utils import get_chunk_shape, get_terminal_tasks, index_2d_from_key
 from numpy.typing import NDArray
+
+from dask_progress_matrix.display import ComputationDisplay
+from dask_progress_matrix.status import ComputationStatus
+from dask_progress_matrix.types import Graph, IndexedTaskKey, State, TaskKey
+from dask_progress_matrix.utils import (
+    get_chunk_shape,
+    get_terminal_tasks,
+    index_2d_from_key,
+)
 
 
 class ProgressMatrix(Callback):
     """
-    A progress matrix for tracking computations of 2D and 3D Dask objects by chunk.
+    A 2D progress matrix for tracking computations of Dask objects by chunk.
 
     Parameters
     ----------
@@ -46,7 +51,7 @@ class ProgressMatrix(Callback):
     each chunk.
 
     >>> import dask.array as da
-    >>> from dask_visualizer import ProgressMatrix
+    >>> from dask_progress_matrix import ProgressMatrix
     >>> with ProgressMatrix(cmap="inferno", scale=1, mode="index"):
     ...     x = da.random.random((128, 128), chunks=(8, 8))
     ...     x.compute()

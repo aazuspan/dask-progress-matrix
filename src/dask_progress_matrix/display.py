@@ -4,7 +4,6 @@ from types import TracebackType
 from typing import Literal, TextIO
 
 import numpy as np
-from dask_visualizer.status import ComputationState
 from matplotlib import colormaps
 from numpy.typing import NDArray
 from rich.console import Console, Group, RenderableType
@@ -13,6 +12,8 @@ from rich.segment import Segment, Segments
 from rich.style import Style
 from rich.table import Table
 from rich.text import Text
+
+from dask_progress_matrix.status import ComputationState
 
 
 class ComputationDisplay:
@@ -34,7 +35,7 @@ class ComputationDisplay:
         self._target_width = target_width
         self._cmap = colormaps.get_cmap(cmap)
         self._live = Live(
-            console=Console(file=out) if out is not None else None,
+            console=Console(file=out),
             auto_refresh=False,
         )
 

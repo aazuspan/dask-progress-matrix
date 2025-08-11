@@ -4,7 +4,6 @@ from collections.abc import Callable
 
 import pytest
 from _pytest.fixtures import FixtureRequest
-from dask_visualizer import ProgressMatrix
 from pytest_textual_snapshot import (
     PseudoApp,
     PseudoConsole,
@@ -14,6 +13,8 @@ from pytest_textual_snapshot import (
 from rich.console import Console
 from syrupy import SnapshotAssertion
 from typing_extensions import Self
+
+from dask_progress_matrix import ProgressMatrix
 
 
 class CapturedProgressMatrix:

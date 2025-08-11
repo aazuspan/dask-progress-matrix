@@ -472,8 +472,8 @@ diagnostics = [
 ]
 
 [[package]]
-name = "dask-visualizer"
-version = "0.1.0"
+name = "dask-progress-matrix"
+version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "dask" },

@@ -5,7 +5,8 @@ from enum import Enum
 from typing import Literal
 
 import numpy as np
-from dask_visualizer.types import ChunkIndex
+
+from dask_progress_matrix.types import ChunkIndex
 
 
 class ComputationState(Enum):

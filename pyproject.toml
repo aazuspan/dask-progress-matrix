@@ -1,5 +1,5 @@
 [project]
-name = "dask-visualizer"
+name = "dask-progress-matrix"
 version = "0.0.1"
 description = "A 2D progress matrix for visualizing Dask computations by chunk."
 readme = "README.md"

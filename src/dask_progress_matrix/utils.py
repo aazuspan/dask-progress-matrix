@@ -5,7 +5,8 @@ import time
 from typing import cast
 
 import dask.array
-from dask_visualizer.types import ChunkIndex, Graph, IndexedTaskKey
+
+from dask_progress_matrix.types import ChunkIndex, Graph, IndexedTaskKey
 
 
 def generate_slow_dask_array(
