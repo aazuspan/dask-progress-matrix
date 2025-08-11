@@ -1,7 +1,6 @@
 import inspect
 import pickle
 from collections.abc import Callable
-from typing import Self
 
 import pytest
 from _pytest.fixtures import FixtureRequest
@@ -14,6 +13,7 @@ from pytest_textual_snapshot import (
 )
 from rich.console import Console
 from syrupy import SnapshotAssertion
+from typing_extensions import Self
 
 
 class CapturedProgressMatrix:

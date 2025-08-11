@@ -480,6 +480,7 @@ dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "rich" },
+    { name = "typing-extensions" },
 ]
 
 [package.dev-dependencies]
@@ -506,6 +507,7 @@ requires-dist = [
     { name = "dask" },
     { name = "numpy" },
     { name = "rich" },
+    { name = "typing-extensions" },
 ]
 
 [package.metadata.requires-dev]

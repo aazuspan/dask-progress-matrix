@@ -1,4 +1,6 @@
-from typing import Any, Unpack
+from typing import Any
+
+from typing_extensions import Unpack
 
 ChunkIndex = tuple[int, int]
 """The 2d indices for a chunk in a computation."""
