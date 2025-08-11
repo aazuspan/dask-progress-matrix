@@ -36,6 +36,9 @@ dev = [
     "xarray",
 ]
 
+[project.scripts]
+dask-progress-matrix = "dask_progress_matrix.cli:main"
+
 [tool.ruff.lint]
 select = ["E", "I", "F", "B", "FA", "UP", "PT", "Q", "RET", "SIM", "PERF"]
 
