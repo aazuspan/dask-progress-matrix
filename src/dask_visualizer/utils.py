@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 import time
+from typing import cast
 
 import dask.array
 from dask_visualizer.types import ChunkIndex, Graph, IndexedTaskKey
@@ -68,4 +69,4 @@ def index_2d_from_key(key: IndexedTaskKey) -> ChunkIndex:
         raise ValueError(f"The key {key} must contain at least 1 dimension.")
     if len(key) == 2:
         return (0, key[1])
-    return (key[-2], key[-1])
+    return cast(tuple[int, int], (key[-2], key[-1]))
