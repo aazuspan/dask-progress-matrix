@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import threading
 import time
 from typing import TYPE_CHECKING, Any, Literal, TextIO
@@ -111,7 +112,8 @@ class ProgressMatrix:
     >>> from dask_progress_matrix.distributed import ProgressMatrix
     >>> import dask.array as da
     >>> client = Client()  # doctest: +SKIP
-    >>> with ProgressMatrix(client, cmap="inferno", scale=1, mode="index"):  # doctest: +SKIP
+    >>> # doctest: +SKIP
+    >>> with ProgressMatrix(client, cmap="inferno", scale=1, mode="index"):
     ...     x = da.random.random((128, 128), chunks=(8, 8))
     ...     x.compute()
     """
@@ -181,12 +183,10 @@ class ProgressMatrix:
     def _monitor_loop(self):
         """Monitor the plugin state and update the display."""
         while not self._stop_monitoring.is_set():
-            try:
+            # Ignore errors to prevent crashes
+            with contextlib.suppress(Exception):
                 self._poll_plugin_state()
-                time.sleep(0.1)  # Poll every 100ms
-            except Exception:
-                # Ignore errors to prevent crashes
-                pass
+            time.sleep(0.1)  # Poll every 100ms
 
     def _poll_plugin_state(self):
         """Poll the plugin state from the scheduler."""
@@ -214,8 +214,12 @@ class ProgressMatrix:
             return
 
         # Update task states
-        started_tasks = set(tuple(t) if isinstance(t, list) else t for t in state["started_tasks"])
-        finished_tasks = set(tuple(t) if isinstance(t, list) else t for t in state["finished_tasks"])
+        started_tasks = set(
+            tuple(t) if isinstance(t, list) else t for t in state["started_tasks"]
+        )
+        finished_tasks = set(
+            tuple(t) if isinstance(t, list) else t for t in state["finished_tasks"]
+        )
 
         # Track which tasks have changed state
         for task in started_tasks:
@@ -244,7 +248,9 @@ class ProgressMatrix:
             return
 
         # Convert from list to tuple if needed
-        terminal_tasks = [tuple(t) if isinstance(t, list) else t for t in terminal_tasks]
+        terminal_tasks = [
+            tuple(t) if isinstance(t, list) else t for t in terminal_tasks
+        ]
 
         self._terminal_tasks = set(terminal_tasks)
         task_indexes = [index_2d_from_key(k) for k in terminal_tasks]
