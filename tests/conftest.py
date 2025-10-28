@@ -4,6 +4,7 @@ from collections.abc import Callable
 
 import pytest
 from _pytest.fixtures import FixtureRequest
+from distributed import Client, LocalCluster
 from pytest_textual_snapshot import (
     PseudoApp,
     PseudoConsole,
@@ -15,6 +16,7 @@ from syrupy import SnapshotAssertion
 from typing_extensions import Self
 
 from dask_progress_matrix import ProgressMatrix
+from dask_progress_matrix.distributed import ProgressMatrix as DistributedProgressMatrix
 
 
 class CapturedProgressMatrix:
@@ -41,6 +43,44 @@ class CapturedProgressMatrix:
     def svg(self) -> str:
         """The captured SVG output of the progress matrix."""
         return self._console.export_svg(unique_id=self._id, clear=False)
+
+
+class CapturedDistributedProgressMatrix:
+    """
+    A context manager for capturing the console output of a distributed ProgressMatrix.
+    """
+
+    def __init__(self, client: Client, id: str = "test", **matrix_kwargs):
+        self._progress_matrix = DistributedProgressMatrix(client, **matrix_kwargs)
+        self._id = id
+        self._console = Console(
+            record=True, force_interactive=True, force_terminal=True
+        )
+
+    def __enter__(self) -> Self:
+        self._progress_matrix.__enter__()
+        self._progress_matrix._display._live.console = self._console
+        return self
+
+    def __exit__(self, *args):
+        self._progress_matrix.__exit__(*args)
+
+    @property
+    def svg(self) -> str:
+        """The captured SVG output of the progress matrix."""
+        return self._console.export_svg(unique_id=self._id, clear=False)
+
+
+@pytest.fixture
+def distributed_client():
+    """Create a local distributed client for testing."""
+    cluster = LocalCluster(
+        n_workers=1, threads_per_worker=1, processes=False, silence_logs=True
+    )
+    client = Client(cluster)
+    yield client
+    client.close()
+    cluster.close()
 
 
 @pytest.fixture

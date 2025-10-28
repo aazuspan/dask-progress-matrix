@@ -1,73 +1,127 @@
 """Tests for distributed ProgressMatrix."""
 
-import dask.array as da
+import time
+
+import dask.array
 import pytest
-from distributed import Client, LocalCluster
+import xarray as xr
 
-from dask_progress_matrix.distributed import ProgressMatrix
-
-
-@pytest.fixture
-def distributed_client():
-    """Create a local distributed client for testing."""
-    cluster = LocalCluster(
-        n_workers=1, threads_per_worker=1, processes=False, silence_logs=True
-    )
-    client = Client(cluster)
-    yield client
-    client.close()
-    cluster.close()
+from .conftest import CapturedDistributedProgressMatrix
 
 
-def test_distributed_progress_matrix_basic(distributed_client):
-    """Test that distributed ProgressMatrix works with a basic computation."""
-    with ProgressMatrix(distributed_client, scale=2):
-        x = da.random.random((64, 64), chunks=(32, 32))
-        result = x.compute()
-
-    assert result.shape == (64, 64)
-
-
-def test_distributed_progress_matrix_multiple_arrays(distributed_client):
-    """Test computing multiple arrays within a single context."""
-    with ProgressMatrix(distributed_client, scale=2):
-        x1 = da.random.random((64, 64), chunks=(32, 32))
-        result1 = x1.compute()
-
-        x2 = da.random.random((32, 32), chunks=(16, 16))
-        result2 = x2.compute()
-
-    assert result1.shape == (64, 64)
-    assert result2.shape == (32, 32)
+@pytest.mark.parametrize("dimensions", [1, 2, 3, 5], ids=lambda i: f"{i}d")
+def test_distributed_progress_matrix_dimensionality(
+    dimensions: int, distributed_client, svg_snapshot
+):
+    """Test that you can generate a progress matrix with arbitrary dimensionality."""
+    shape = (2, 2, 2, 64, 64)[-dimensions:]
+    chunks = tuple([d // 2 for d in shape])
+    da = dask.array.zeros(shape, chunks=chunks)
+    with CapturedDistributedProgressMatrix(distributed_client, scale=4) as captured:
+        da.compute()
+        time.sleep(0.3)  # Allow time for display to update
+        svg_snapshot(captured.svg)
 
 
-def test_distributed_progress_matrix_no_chunks(distributed_client):
-    """Test that computations with no chunked tasks don't crash."""
-    with ProgressMatrix(distributed_client):
-        x = da.random.random((64,), chunks=(64,))
-        result = x.compute()
+@pytest.mark.parametrize("cmap", ["viridis", "inferno"])
+def test_distributed_progress_matrix_cmap(cmap: str, distributed_client, svg_snapshot):
+    """Test that you can set the colormap of the progress matrix."""
+    da = dask.array.zeros((64, 64), chunks=(32, 32))
 
-    assert result.shape == (64,)
-
-
-@pytest.mark.parametrize("mode", ["index", "elapsed"])
-def test_distributed_progress_matrix_modes(distributed_client, mode):
-    """Test different display modes."""
-    with ProgressMatrix(distributed_client, mode=mode, scale=2):
-        x = da.random.random((64, 64), chunks=(32, 32))
-        result = x.compute()
-
-    assert result.shape == (64, 64)
+    with CapturedDistributedProgressMatrix(
+        distributed_client,
+        cmap=cmap,
+        mode="index",
+        show_legend=True,
+        scale=4,
+    ) as captured:
+        da.compute()
+        time.sleep(0.3)  # Allow time for display to update
+        svg_snapshot(captured.svg)
 
 
-def test_distributed_progress_matrix_with_xarray(distributed_client):
-    """Test that ProgressMatrix works with xarray objects."""
-    import xarray as xr
+@pytest.mark.parametrize("show_legend", [True, False], ids=("legend", "nolegend"))
+def test_distributed_progress_matrix_show_legend(
+    show_legend: bool, distributed_client, svg_snapshot
+):
+    """Test that you can toggle the legend of the progress matrix."""
+    da = dask.array.zeros((64, 64), chunks=(32, 32))
 
-    arr = da.random.random((64, 64), chunks=(32, 32))
-    ds = xr.Dataset({"data": (("x", "y"), arr)})
+    with CapturedDistributedProgressMatrix(
+        distributed_client, show_legend=show_legend
+    ) as captured:
+        da.compute()
+        time.sleep(0.3)  # Allow time for display to update
+        svg_snapshot(captured.svg)
 
-    with ProgressMatrix(distributed_client, scale=2):
-        result = ds.compute()
 
-    assert result["data"].shape == (64, 64)
+@pytest.mark.parametrize("target_width", [4, 16, 32])
+def test_distributed_progress_matrix_target_width(
+    target_width: int, distributed_client, svg_snapshot
+):
+    """Test that you can set the target width of the progress matrix."""
+    da = dask.array.zeros((64,), chunks=(32,))
+
+    with CapturedDistributedProgressMatrix(
+        distributed_client, target_width=target_width
+    ) as captured:
+        da.compute()
+        time.sleep(0.3)  # Allow time for display to update
+        svg_snapshot(captured.svg)
+
+
+@pytest.mark.parametrize("scale", [1, 2, 4])
+def test_distributed_progress_matrix_scale(
+    scale: int, distributed_client, svg_snapshot
+):
+    """Test that you can set the scale of the progress matrix."""
+    da = dask.array.zeros((64,), chunks=(32,))
+
+    with CapturedDistributedProgressMatrix(distributed_client, scale=scale) as captured:
+        da.compute()
+        time.sleep(0.3)  # Allow time for display to update
+        svg_snapshot(captured.svg)
+
+
+def test_distributed_progress_matrix_multiple_arrays(distributed_client, svg_snapshot):
+    """Test that you can compute multiple objects within a single progress context."""
+    da1 = dask.array.zeros((64, 64), chunks=(32, 32))
+    da2 = dask.array.zeros((16, 64), chunks=(16, 16))
+
+    with CapturedDistributedProgressMatrix(
+        distributed_client, target_width=32
+    ) as captured:
+        da1.compute()
+        time.sleep(0.3)  # Allow time for display to update
+        da2.compute()
+        time.sleep(0.3)  # Allow time for display to update
+        svg_snapshot(captured.svg)
+
+
+@pytest.mark.parametrize("as_dataarray", [False, True], ids=["dataset", "dataarray"])
+def test_distributed_progress_matrix_xarray(
+    as_dataarray: bool, distributed_client, svg_snapshot
+):
+    """Test that you can compute an xarray object within a progress context."""
+
+    da = dask.array.zeros((64, 64), chunks=(32, 32))
+    ds: xr.Dataset | xr.DataArray = xr.Dataset({"data": (("x", "y"), da)})
+    if as_dataarray:
+        ds = ds.to_dataarray()
+
+    with CapturedDistributedProgressMatrix(
+        distributed_client, target_width=32
+    ) as captured:
+        ds.compute()
+        time.sleep(0.3)  # Allow time for display to update
+        svg_snapshot(captured.svg)
+
+
+def test_distributed_progress_matrix_with_no_tasks(distributed_client, svg_snapshot):
+    """Test that a computation with no terminal tasks is ignored without errors."""
+    da = dask.array.zeros((64,), chunks=(64,))
+
+    with CapturedDistributedProgressMatrix(distributed_client) as captured:
+        da.compute()
+        time.sleep(0.3)  # Allow time for display to update
+        svg_snapshot(captured.svg)
