@@ -178,11 +178,15 @@ class ProgressMatrix:
             if self._monitor_thread:
                 self._monitor_thread.join(timeout=2.0)
 
+            # Give a brief moment for any final scheduler updates to complete
+            time.sleep(0.05)
+
             # Do one final poll to catch any completed tasks that finished
-            # after the last poll but before the thread stopped
-            if self._computation_active:
-                with contextlib.suppress(Exception):
-                    self._poll_plugin_state()
+            # after the last poll but before the thread stopped.
+            # Always poll regardless of computation_active status since the
+            # computation may have finished but not yet been polled.
+            with contextlib.suppress(Exception):
+                self._poll_plugin_state()
 
             # Clean up display if still active
             if self._computation_active and self._display:

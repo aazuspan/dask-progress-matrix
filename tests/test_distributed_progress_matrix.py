@@ -1,7 +1,5 @@
 """Tests for distributed ProgressMatrix."""
 
-import time
-
 import dask.array
 import pytest
 import xarray as xr
@@ -19,8 +17,8 @@ def test_distributed_progress_matrix_dimensionality(
     da = dask.array.zeros(shape, chunks=chunks)
     with CapturedDistributedProgressMatrix(distributed_client, scale=4) as captured:
         da.compute()
-        time.sleep(0.3)  # Allow time for display to update
-        svg_snapshot(captured.svg)
+    
+    svg_snapshot(captured.svg)
 
 
 @pytest.mark.parametrize("cmap", ["viridis", "inferno"])
@@ -36,8 +34,8 @@ def test_distributed_progress_matrix_cmap(cmap: str, distributed_client, svg_sna
         scale=4,
     ) as captured:
         da.compute()
-        time.sleep(0.3)  # Allow time for display to update
-        svg_snapshot(captured.svg)
+    
+    svg_snapshot(captured.svg)
 
 
 @pytest.mark.parametrize("show_legend", [True, False], ids=("legend", "nolegend"))
@@ -51,8 +49,8 @@ def test_distributed_progress_matrix_show_legend(
         distributed_client, show_legend=show_legend
     ) as captured:
         da.compute()
-        time.sleep(0.3)  # Allow time for display to update
-        svg_snapshot(captured.svg)
+    
+    svg_snapshot(captured.svg)
 
 
 @pytest.mark.parametrize("target_width", [4, 16, 32])
@@ -66,8 +64,8 @@ def test_distributed_progress_matrix_target_width(
         distributed_client, target_width=target_width
     ) as captured:
         da.compute()
-        time.sleep(0.3)  # Allow time for display to update
-        svg_snapshot(captured.svg)
+    
+    svg_snapshot(captured.svg)
 
 
 @pytest.mark.parametrize("scale", [1, 2, 4])
@@ -79,8 +77,8 @@ def test_distributed_progress_matrix_scale(
 
     with CapturedDistributedProgressMatrix(distributed_client, scale=scale) as captured:
         da.compute()
-        time.sleep(0.3)  # Allow time for display to update
-        svg_snapshot(captured.svg)
+    
+    svg_snapshot(captured.svg)
 
 
 def test_distributed_progress_matrix_multiple_arrays(distributed_client, svg_snapshot):
@@ -92,10 +90,9 @@ def test_distributed_progress_matrix_multiple_arrays(distributed_client, svg_sna
         distributed_client, target_width=32
     ) as captured:
         da1.compute()
-        time.sleep(0.3)  # Allow time for display to update
         da2.compute()
-        time.sleep(0.3)  # Allow time for display to update
-        svg_snapshot(captured.svg)
+    
+    svg_snapshot(captured.svg)
 
 
 @pytest.mark.parametrize("as_dataarray", [False, True], ids=["dataset", "dataarray"])
@@ -113,8 +110,8 @@ def test_distributed_progress_matrix_xarray(
         distributed_client, target_width=32
     ) as captured:
         ds.compute()
-        time.sleep(0.3)  # Allow time for display to update
-        svg_snapshot(captured.svg)
+    
+    svg_snapshot(captured.svg)
 
 
 def test_distributed_progress_matrix_with_no_tasks(distributed_client, svg_snapshot):
@@ -123,5 +120,5 @@ def test_distributed_progress_matrix_with_no_tasks(distributed_client, svg_snaps
 
     with CapturedDistributedProgressMatrix(distributed_client) as captured:
         da.compute()
-        time.sleep(0.3)  # Allow time for display to update
-        svg_snapshot(captured.svg)
+    
+    svg_snapshot(captured.svg)

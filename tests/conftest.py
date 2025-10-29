@@ -58,8 +58,9 @@ class CapturedDistributedProgressMatrix:
         )
 
     def __enter__(self) -> Self:
-        self._progress_matrix.__enter__()
+        # Set the console BEFORE entering the context so Live uses it
         self._progress_matrix._display._live.console = self._console
+        self._progress_matrix.__enter__()
         return self
 
     def __exit__(self, *args):
