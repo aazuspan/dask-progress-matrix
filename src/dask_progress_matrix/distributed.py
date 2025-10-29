@@ -152,6 +152,10 @@ class ProgressMatrix:
         self._computation_active = False
         self._monitor_thread: threading.Thread | None = None
         self._stop_monitoring = threading.Event()
+        
+        # Track which tasks we've already processed to avoid duplicate updates
+        self._processed_started_tasks: set[tuple] = set()
+        self._processed_finished_tasks: set[tuple] = set()
 
     def __enter__(self):
         """Register the plugin when entering context."""
@@ -221,14 +225,19 @@ class ProgressMatrix:
             tuple(t) if isinstance(t, list) else t for t in state["finished_tasks"]
         )
 
-        # Track which tasks have changed state
-        for task in started_tasks:
+        # Track which tasks have changed state (only process new state changes)
+        new_started_tasks = started_tasks - self._processed_started_tasks
+        new_finished_tasks = finished_tasks - self._processed_finished_tasks
+        
+        for task in new_started_tasks:
             if task in self._terminal_tasks:
                 self._status.start_task(index_2d_from_key(task))
+                self._processed_started_tasks.add(task)
 
-        for task in finished_tasks:
+        for task in new_finished_tasks:
             if task in self._terminal_tasks:
                 self._status.finish_task(index_2d_from_key(task))
+                self._processed_finished_tasks.add(task)
 
         # Update display
         self._display.update(self._status.state)
@@ -257,6 +266,10 @@ class ProgressMatrix:
         shape = get_chunk_shape(task_indexes)
 
         self._status = ComputationStatus(task_indexes, shape=shape, mode=self._mode)
+
+        # Reset processed task tracking for new computation
+        self._processed_started_tasks = set()
+        self._processed_finished_tasks = set()
 
         self._display.initialize(shape)
         self._display.__enter__()
