@@ -178,6 +178,13 @@ class ProgressMatrix:
             if self._monitor_thread:
                 self._monitor_thread.join(timeout=2.0)
 
+            # Do one final poll to catch any completed tasks that finished
+            # after the last poll but before the thread stopped
+            if self._computation_active:
+                with contextlib.suppress(Exception):
+                    self._poll_plugin_state()
+
+            # Clean up display if still active
             if self._computation_active and self._display:
                 self._display.__exit__(*args)
                 self._computation_active = False
